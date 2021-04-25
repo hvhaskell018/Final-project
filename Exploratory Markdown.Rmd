@@ -56,7 +56,7 @@ Algae <- read_csv("Project_Mock_Algae_clearing.csv")
 
 **Column Names:** `r names(Algae)`
 
-After looking over the column names the CEA data seems a bit disorganized. It looks like there was some spaces left between columns that should be removed and I think it is worth while to assign a few more variables to help separate and organize all of the data. 
+After looking over the column names it appears that the CEA data seems a bit disorganized. It looks like there are some spaces left between columns that should be removed and I think it is worth while to assign a few more variables to help separate and organize all of the data. 
 
 ```{r summary tables, include=FALSE}
 #Generating summary tables to get a feel for the range of data
@@ -64,11 +64,11 @@ summary(CEA_data)
 summary(Algae)
 ```
 ```{r Cleaning up CEA_data, include = FALSE}
-
 #Getting rid of empty columns within the CEA_data
 CEA_data <- subset (CEA_data, select = -c(X16,X21))
 
-#Assigning new variables to help organize the data and information better 
+#Assigning new variables to help organize the data and information better and get rid of any NAs
+#Mortality data
 Mortality <- subset (CEA_data, select = c(16:19)) %>%
   rename(
     "Treatment" = "Treatment b",
@@ -76,26 +76,69 @@ Mortality <- subset (CEA_data, select = c(16:19)) %>%
     "End_exp_mortality" = "End of expt Mortality") %>%
   filter(!is.na(End_exp_mortality))
 
+#Upper lethal temp data
 Upper_lethal_temp <- subset (CEA_data, select = c(20:22)) %>%
   rename(
     "Treatment" = "Treatment c",
     "Fiber_concentration" = "Fiber concentration c",
     "Upper_lethal_temperature" = "Upper lethal temperature") %>%
-  filter(!is.na(Upper_lethal_temp))
+  filter(!is.na(Upper_lethal_temperature))
 
+#CEA  data
 Cleaned_CEA_data <- subset (CEA_data, select = -c(14:22)) %>% #CEA only
   rename(
     "Fiber_concentration" = "Fiber concentration",
     "Tank_ID" = "Tank ID",
     "Animal_ID" = "Animal ID")
 
+#Growth data
 Growth <- subset (CEA_data, select = -c(8:13, 16:22)) %>%
   rename(
     "Fiber_concentration" = "Fiber concentration",
     "Tank_ID" = "Tank ID",
     "Animal_ID" = "Animal ID",
-    "Shell_width" = "Shell width",
+    "Shell_length" = "Shell width",
     "Tissue_mass" = "Tissue Mass")
 ```
+To start, I am curious to see if there was any noticeable growth among the oysters over the duration of the experiment. 
 
+Basic plots of shell length and tissue mass by day to determine if there was any growth overall in the oysters during the duration of the experiment (regardless of treatment exposure) 
+```{r plots of shell length and tissue mass (regardless of treatment), include=FALSE}
+
+#Generate new data set that includes the average shell length and tissue mass for each sample day
+Growth_averages <- Growth %>%
+  group_by(Day) %>%
+  summarise(mean_shell_length = mean(Shell_length), mean_tissue_mass = mean(Tissue_mass))
+
+```
+```{r plot of shell length, fig.height=3, fig.width=4, echo=FALSE}
+#plot these to see if there was any shell growth over the duration of the experiment 
+
+ggplot(Growth_averages, aes(Day, mean_shell_length)) +
+  geom_line() +
+  labs(x = "Day", y = "Mean Shell Length (mm)") +
+  scale_x_continuous(breaks = c(0, 15, 30, 45, 60, 75, 90))
+```
+
+**Figure 1.** Mean shell length of oysters per sample day over the duration of the experiment. Overall there is a slight upward trend indicating that there was indeed some shell growth during the experiment. 
+
+```{r plot of tissue mass, fig.height=3, fig.width=4, echo=FALSE}
+ggplot(Growth_averages, aes(Day, mean_tissue_mass)) +
+  geom_line() +
+  labs(x = "Day", y = "Mean Wet Tissue Mass (g)") +
+  scale_x_continuous(breaks = c(0, 15, 30, 45, 60, 75, 90))
+```
+
+**Figure 2.** Mean wet tissue mass of oysters per sample day over the duration of the experiment. Overall there is an upward trend with the largest increase in tissue mass occurring after day 60. 
+
+These two plots tell me that there was at least some growth occurring in the oysters over the duration of the experiment indicating that our husbandry techniques were sufficient enough to allow for proper growth to occur.  
+
+
+I am now curious to see if there was any differences in growth trends between treatments.
+
+```{r average growth grouped by day and by treatment, include = FALSE}
+Growth_averages_treatment <- Growth %>%
+  group_by(Day, Treatment) %>%
+  summarise(mean_shell_length = mean(Shell_length), mean_tissue_mass = mean(Tissue_mass))
+```
 
