@@ -57,3 +57,45 @@ Algae <- read_csv("Project_Mock_Algae_clearing.csv")
 **Column Names:** `r names(Algae)`
 
 After looking over the column names the CEA data seems a bit disorganized. It looks like there was some spaces left between columns that should be removed and I think it is worth while to assign a few more variables to help separate and organize all of the data. 
+
+```{r summary tables, include=FALSE}
+#Generating summary tables to get a feel for the range of data
+summary(CEA_data)
+summary(Algae)
+```
+```{r Cleaning up CEA_data, include = FALSE}
+
+#Getting rid of empty columns within the CEA_data
+CEA_data <- subset (CEA_data, select = -c(X16,X21))
+
+#Assigning new variables to help organize the data and information better 
+Mortality <- subset (CEA_data, select = c(16:19)) %>%
+  rename(
+    "Treatment" = "Treatment b",
+    "Fiber_concentration" = "Fiber concentration b",
+    "End_exp_mortality" = "End of expt Mortality") %>%
+  filter(!is.na(End_exp_mortality))
+
+Upper_lethal_temp <- subset (CEA_data, select = c(20:22)) %>%
+  rename(
+    "Treatment" = "Treatment c",
+    "Fiber_concentration" = "Fiber concentration c",
+    "Upper_lethal_temperature" = "Upper lethal temperature") %>%
+  filter(!is.na(Upper_lethal_temp))
+
+Cleaned_CEA_data <- subset (CEA_data, select = -c(14:22)) %>% #CEA only
+  rename(
+    "Fiber_concentration" = "Fiber concentration",
+    "Tank_ID" = "Tank ID",
+    "Animal_ID" = "Animal ID")
+
+Growth <- subset (CEA_data, select = -c(8:13, 16:22)) %>%
+  rename(
+    "Fiber_concentration" = "Fiber concentration",
+    "Tank_ID" = "Tank ID",
+    "Animal_ID" = "Animal ID",
+    "Shell_width" = "Shell width",
+    "Tissue_mass" = "Tissue Mass")
+```
+
+
