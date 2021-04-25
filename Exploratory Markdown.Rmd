@@ -4,27 +4,56 @@ author: "Hannah Haskell"
 date: "4/15/2021"
 output: pdf_document
 ---
-
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+#setting the working directory
+knitr::opts_knit$set(root.dir = '/Users/hannahhaskell/Desktop/')
 ```
 
-## R Markdown
+## Libraries
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+`tidyverse`
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+`lubridate`
 
-```{r cars}
-summary(cars)
+`gapminder`
+
+`modelr`
+
+`broom`
+
+## Data
+
+Two data files will be used for this exploratory analysis. The CEA_data includes  physiological measurements of the oysters during the exposure trials as well as size measurements, mortalities, and upper lethal temperatures. The algae data includes the number of algae cells cleared over time during a post exposure clearance rate trial.  
+
+```{r loading the data, include=FALSE, message=FALSE}
+library(tidyverse)
+library(lubridate)
+library(gapminder)
+library(knitr)
+library(modelr)
+library(broom)
+
+CEA_data <- read_csv("Project_Mock_CEA_data.csv")
+Algae <- read_csv("Project_Mock_Algae_clearing.csv")
+
 ```
 
-## Including Plots
+## Basic Data Exploration
 
-You can also embed plots, for example:
+### CEA Data:
 
-```{r pressure, echo=FALSE}
-plot(pressure)
-```
+**Rows:** n = `r nrow(CEA_data)`
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+**Columns:** n = `r ncol(CEA_data)`
+
+**Column Names:** `r names(CEA_data)`
+
+### Algae Data:
+
+**Rows:** n = `r nrow(Algae)`
+
+**Columns:** n = `r ncol(Algae)`
+
+**Column Names:** `r names(Algae)`
+
+After looking over the column names the CEA data seems a bit disorganized. It looks like there was some spaces left between columns that should be removed and I think it is worth while to assign a few more variables to help separate and organize all of the data. 
