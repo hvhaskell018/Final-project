@@ -23,7 +23,7 @@ knitr::opts_knit$set(root.dir = '/Users/hannahhaskell/Desktop/')
 
 ## Data
 
-Two data files will be used for this exploratory analysis. The CEA_data includes  physiological measurements of the oysters during the exposure trials as well as size measurements, mortalities, and upper lethal temperatures. The algae data includes the number of algae cells cleared over time during a post exposure clearance rate trial.  
+A single data file will be uploaded for this exploratory analysis. The BIO539_mock_data includes  physiological measurements of the oysters during the exposure trials as well as size measurements (shell length), moralities and the number of algae cells cleared over time during a post exposure clearance rate trial.  
 
 ```{r loading the data, include=FALSE, message=FALSE}
 library(tidyverse)
@@ -33,8 +33,7 @@ library(knitr)
 library(modelr)
 library(broom)
 
-CEA_data <- read_csv("Project_Mock_CEA_data.csv")
-Algae <- read_csv("Project_Mock_Algae_clearing.csv")
+CEA_data <- read_csv("BIO539_mock_data.csv")
 
 ```
 
@@ -48,58 +47,49 @@ Algae <- read_csv("Project_Mock_Algae_clearing.csv")
 
 **Column Names:** `r names(CEA_data)`
 
-### Algae Data:
 
-**Rows:** n = `r nrow(Algae)`
+After looking over the column names it appears that the CEA data seems a bit disorganized. It looks like there are some spaces left between columns that should be removed and multiple different types of data included in the single file. I think it is worth while to assign a few variables to help separate and organize all of the data for subsequent analyses. 
 
-**Columns:** n = `r ncol(Algae)`
 
-**Column Names:** `r names(Algae)`
+```{r Cleaning up CEA_data, include = FALSE}
 
-After looking over the column names it appears that the CEA data seems a bit disorganized. It looks like there are some spaces left between columns that should be removed and I think it is worth while to assign a few more variables to help separate and organize all of the data. 
+#Assigning new variables to help organize the data/information better
+
+
+#CEA  data
+Cleaned_CEA_data <- subset (CEA_data, select = -c(12:23)) %>% #CEA only
+  rename(
+    "Fiber_concentration" = "Fiber concentration",
+    "Replicate" = "Tank (replicate #)",
+    "Animal_ID" = "Animal ID #")
+
+#Mortality data
+Mortality <- subset (CEA_data, select = c(15:18)) %>%
+  rename(
+    "Treatment" = "Treatment a",
+    "Fiber_concentration" = "Fiber concentration a",
+    "End_exp_mortality" = "End of expt. mortality") %>%
+  filter(!is.na(End_exp_mortality))
+
+
+#Growth data
+Growth <- subset (CEA_data, select = c(1,3,4,12)) %>%
+  rename(
+    "Fiber_concentration" = "Fiber concentration",
+    "Shell_length" = "Shell width (mm)")
+```
 
 ```{r summary tables, include=FALSE}
 #Generating summary tables to get a feel for the range of data
-summary(CEA_data)
-summary(Algae)
+summary(Cleaned_CEA_data)
+summary(Growth)
+summary(Mortality)
 ```
-```{r Cleaning up CEA_data, include = FALSE}
-#Getting rid of empty columns within the CEA_data
-CEA_data <- subset (CEA_data, select = -c(X16,X21))
 
-#Assigning new variables to help organize the data and information better and get rid of any NAs
-#Mortality data
-Mortality <- subset (CEA_data, select = c(16:19)) %>%
-  rename(
-    "Treatment" = "Treatment b",
-    "Fiber_concentration" = "Fiber concentration b",
-    "End_exp_mortality" = "End of expt Mortality") %>%
-  filter(!is.na(End_exp_mortality))
 
-#Upper lethal temp data
-Upper_lethal_temp <- subset (CEA_data, select = c(20:22)) %>%
-  rename(
-    "Treatment" = "Treatment c",
-    "Fiber_concentration" = "Fiber concentration c",
-    "Upper_lethal_temperature" = "Upper lethal temperature") %>%
-  filter(!is.na(Upper_lethal_temperature))
 
-#CEA  data
-Cleaned_CEA_data <- subset (CEA_data, select = -c(14:22)) %>% #CEA only
-  rename(
-    "Fiber_concentration" = "Fiber concentration",
-    "Tank_ID" = "Tank ID",
-    "Animal_ID" = "Animal ID")
 
-#Growth data
-Growth <- subset (CEA_data, select = -c(8:13, 16:22)) %>%
-  rename(
-    "Fiber_concentration" = "Fiber concentration",
-    "Tank_ID" = "Tank ID",
-    "Animal_ID" = "Animal ID",
-    "Shell_length" = "Shell width",
-    "Tissue_mass" = "Tissue Mass")
-```
+
 To start, I am curious to see if there was any noticeable growth among the oysters over the duration of the experiment. 
 
 Basic plots of shell length and tissue mass by day to determine if there was any growth overall in the oysters during the duration of the experiment (regardless of treatment exposure) 
