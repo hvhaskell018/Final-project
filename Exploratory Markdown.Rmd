@@ -89,14 +89,7 @@ summary(Mortality)
 
 To begin the exploratory analysis, I am curious to see if there was any noticeable growth among the oysters over the duration of the experiment. 
 
-```{r plot of shell length, include=FALSE}
 
-#Generate new data set that includes the average shell length and tissue mass for each sample day
-Growth_averages <- Growth %>%
-  group_by(Day) %>%
-  summarise(mean_shell_length = mean(Shell_length), mean_tissue_mass = mean(Tissue_mass))
-
-```
 ```{r plot of shell length, fig.height=4, fig.width=6, echo=FALSE}
 #plot these to see if there was any shell growth over the duration of the experiment 
 
@@ -109,8 +102,26 @@ ggplot(Growth, aes(Treatment, Shell_length)) +
 
 **Figure 1.** Shell length of oysters (n = 8 per treatment). Baseline measurements represent shell length at the beginning of the experiment. All other lengths were measured 3 months after the baseline measurements, at the end of the experiment. Overall there appears to have been consistent growth among treatment groups with the exception of the [Fiber 2] + PCB group which had less growth overall.
 
-I am now curious to see if the differences in growth between the baseline and control/treatments are actually significant, especially the [Fiber 2] + PCB group.
+I am now curious to see if the differences in growth between the baseline and control/treatments are actually significant, especially the [Fiber 2] + PCB group. To determine this I will preform an ANOVA as well as a Tukey significance test. 
+
+Results from the ANOVA and Tukey test indicate that differences between all treatments and the baseline are significant with the exception of [Fiber 2] + PCB group (p = )
 
 
+```{r growth significance testing, include=FALSE}
+
+#make sure R is interpreting treatment column as characters
+class(Growth$Treatment)
+
+#ANOVA to determine if there is any significant differences among the treatment groups
+summary(aov(Growth$Shell_length~Growth$Treatment))
+
+#according to the ANOVA there is a significant difference in at least one pair of the treatment groups..
+# will now preform a Tukey test to determine where the difference(s) are
+
+TukeyHSD(aov(Growth$Shell_length~Growth$Treatment))
+
+
+
+```
 
 
