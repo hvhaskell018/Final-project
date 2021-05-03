@@ -87,13 +87,9 @@ summary(Mortality)
 ```
 
 
+To begin the exploratory analysis, I am curious to see if there was any noticeable growth among the oysters over the duration of the experiment. 
 
-
-
-To start, I am curious to see if there was any noticeable growth among the oysters over the duration of the experiment. 
-
-Basic plots of shell length and tissue mass by day to determine if there was any growth overall in the oysters during the duration of the experiment (regardless of treatment exposure) 
-```{r plots of shell length and tissue mass (regardless of treatment), include=FALSE}
+```{r plot of shell length, include=FALSE}
 
 #Generate new data set that includes the average shell length and tissue mass for each sample day
 Growth_averages <- Growth %>%
@@ -101,54 +97,20 @@ Growth_averages <- Growth %>%
   summarise(mean_shell_length = mean(Shell_length), mean_tissue_mass = mean(Tissue_mass))
 
 ```
-```{r plot of shell length, fig.height=3, fig.width=4, echo=FALSE}
+```{r plot of shell length, fig.height=4, fig.width=6, echo=FALSE}
 #plot these to see if there was any shell growth over the duration of the experiment 
 
-ggplot(Growth_averages, aes(Day, mean_shell_length)) +
-  geom_line() +
-  labs(x = "Day", y = "Mean Shell Length (mm)") +
-  scale_x_continuous(breaks = c(0, 15, 30, 45, 60, 75, 90))
-```
-
-**Figure 1.** Mean shell length of oysters per sample day over the duration of the experiment. Overall there is an obvious upward trend indicating that there was indeed some shell growth during the experiment. 
-
-```{r plot of tissue mass, fig.height=3, fig.width=4, echo=FALSE}
-ggplot(Growth_averages, aes(Day, mean_tissue_mass)) +
-  geom_line() +
-  labs(x = "Day", y = "Mean Wet Tissue Mass (g)") +
-  scale_x_continuous(breaks = c(0, 15, 30, 45, 60, 75, 90))
-```
-
-**Figure 2.** Mean wet tissue mass of oysters per sample day over the duration of the experiment. Overall there is an upward trend with the largest increase in tissue mass occurring after day 75. 
-
-These two plots tell me that there was at least some growth occurring in the oysters over the duration of the experiment indicating that our husbandry techniques were sufficient enough to allow for proper growth to occur.  
-
-
-I am now curious to see if there was any differences in growth trends between treatments.
-
-```{r average growth grouped by day and by treatment, include = FALSE}
-#Make new data set that averages the growth by day and treatment 
-Growth_averages_treatment <- Growth %>%
-  group_by(Day, Treatment) %>%
-  summarise(mean_shell_length = mean(Shell_length), mean_tissue_mass = mean(Tissue_mass))
-```
-```{r plot shell length growth grouped by treatment, fig.height=4, fig.width=6, echo=FALSE}
-ggplot(Growth_averages_treatment, aes(Day, mean_shell_length, color = factor(Treatment, labels = c("1 Fiber/mL", "1 Fiber/mL + PCB", "10 Fibers/mL", "10 Fiber/mL + PCB", "Control")))) +
-  geom_line() +
-  labs(x = "Day", y = "Mean Shell Length (mm)", color = "Treatment") +
-  scale_x_continuous(breaks = c(0, 15, 30, 45, 60, 75, 90))
+ggplot(Growth, aes(Treatment, Shell_length)) +
+  geom_boxplot() +
+  labs(x = "Treatment", y = "Shell Length (mm)") +
+  scale_x_discrete(limits = c("Baseline", "Control", "[Fiber 1]", "[Fiber 1] + PCB", "[Fiber 2]", "[Fiber 2] + PCB")) #changing the order of the x axis
   
 ```
 
-**Figure 3.** Mean oyster shell length by treatment and by day. Variations within the data may potentially be a result of damage/breakage of shells while being handled throughout the experiment. Overall trends appear similar among the treatment groups with the exception of 10 Fibers/mL + PCB which appears to have experienced less shell growth overall. 
+**Figure 1.** Shell length of oysters (n = 8 per treatment). Baseline measurements represent shell length at the beginning of the experiment. All other lengths were measured 3 months after the baseline measurements, at the end of the experiment. Overall there appears to have been consistent growth among treatment groups with the exception of the [Fiber 2] + PCB group which had less growth overall.
+
+I am now curious to see if the differences in growth between the baseline and control/treatments are actually significant, especially the [Fiber 2] + PCB group.
 
 
-```{r plot wet tissue mass grouped by treatment, fig.height=4, fig.width=6, echo=FALSE}
-ggplot(Growth_averages_treatment, aes(Day, mean_tissue_mass, color = factor(Treatment, labels = c("1 Fiber/mL", "1 Fiber/mL + PCB", "10 Fibers/mL", "10 Fiber/mL + PCB", "Control")))) +
-  geom_line() +
-  labs(x = "Day", y = "Mean Wet Tissue Mass (g)", color = "Treatment") +
-  scale_x_continuous(breaks = c(0, 15, 30, 45, 60, 75, 90))
 
-```
 
-**Figure 4.** Mean wet tissue mass by treatment and by day. Overall increase in mean tissue mass among all treatment groups. Oysters exposed to PCBs appear to have the smallest increase in tissue mass out of all the experimental treatments. 
