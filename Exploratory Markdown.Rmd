@@ -101,14 +101,27 @@ summary(Mortality)
 
 To begin the exploratory analysis, I am curious to see if there was any noticeable growth among the oysters over the duration of the experiment. 
 
+```{r setting theme for ggplot labels, include=FALSE}
+#making a theme for my plots so that all axis and legend labels can remain consistent among each plot
 
-```{r plot of shell length, fig.height=5, fig.width=9, echo=FALSE}
+My_Theme <- theme(
+  axis.title.x = element_text(size = 16), #x axis title label
+  axis.text = element_text(size = 15), # x and y axis labels
+  legend.text = element_text(size = 15), # legend contents labels
+  legend.title = element_text(size = 16), # legend title label
+  axis.title.y = element_text(size = 16)) # y axis title label
+
+```
+
+
+```{r plot of shell length, fig.height = 7, fig.width = 12, echo=FALSE}
 #plot these to see if there was any shell growth over the duration of the experiment 
 
 ggplot(Growth, aes(Treatment, Shell_length, color = factor(Fiber_concentration))) + ##fill = factor(Fiber_concentration) this would change the boxes different colors to distinguish between fiber concentrations
   geom_boxplot() +
   labs(x = "Treatment", y = "Shell Length (mm)", color = "Fiber Concentration (fibers/ml)") +
-  scale_x_discrete(limits = c("Baseline", "Control", "[Fiber 1]", "[Fiber 1] + PCB", "[Fiber 2]", "[Fiber 2] + PCB")) #changing the order of the x axis
+  scale_x_discrete(limits = c("Baseline", "Control", "[Fiber 1]", "[Fiber 1] + PCB", "[Fiber 2]", "[Fiber 2] + PCB")) + #changing the order of the x axis
+  My_Theme
   
 ```
 
@@ -155,10 +168,10 @@ ggplot(data = Growth, aes(sample = sqrt_shell_length)) +
 
 ```
 
-I am now curious to see if the differences in growth between the baseline and the various treatments are actually significant, especially the [Fiber 2] + PCB group. To determine this I will preform an ANOVA as well as a Tukey significance test. 
+I am now curious to see if the differences in growth between the baseline and the various treatments are actually significant, especially the [Fiber 2] + PCB group. To determine this I will assess for normality and then preform an ANOVA as well as a Tukey significance test. 
 
 ```{r assessing normality of growth data by treatment, echo=FALSE}
-ggplot(data = Growth, aes(sample = sqrt_shell_length)) + 
+ggplot(data = Growth, aes(sample = Shell_length)) + 
   geom_qq() +
   stat_qq_line(col = 'blue') +
   facet_wrap(~Treatment)
@@ -195,6 +208,7 @@ cleaned_tidy_growth_stats <- tidy_growth_stats[ , c("contrast", "adj.p.value")] 
   
 ```
 
+
 ```{r Tukey results table, include=TRUE, echo=FALSE}
 
 #Printing out a cleaned up version of the anova summary stats including only relevant comparisons
@@ -226,8 +240,67 @@ When oysters were exposed to PCBs the number of moralities increased regardless 
 Now that I have assessed what growth and moralities looked like across treatments I am now curious to see what the cellular energy allocation data looks like. I will first examine how the individual physiological measurements such as lipids, carbohydrates, and proteins all vary between treatments and how they compare to the baseline values. 
 
 
-```{r lipid plots, include=FALSE}
-ggplot(Cleaned_CEA_data, aes(Treatment, CHO)) +
-  geom_boxplot()
+```{r carbohydrate plot, fig.height=4, fig.width=8, echo=FALSE}
+
+
+ggplot(Cleaned_CEA_data, aes(Treatment, CHO ,  color = factor(Fiber_concentration))) +
+  geom_boxplot() +
+  labs(x = "Treatment", y = "Carbohydrate (mJ/mg)", color = "Fiber Concentration (fibers/ml)") +
+  scale_x_discrete(limits = c("Baseline", "Control", "[Fiber 1]", "[Fiber 1] + PCB", "[Fiber 2]", "[Fiber 2] + PCB")) +
+  My_Theme
+```
+**Figure 4.** Total energy from cellular carbohydrate content (mJ/mg) extracted from whole body *C. virginica* tissue samples.
+
+
+```{r lipid plot, fig.height=4, fig.width=8, echo=FALSE}
+ggplot(Cleaned_CEA_data, aes(Treatment, LIP ,  color = factor(Fiber_concentration))) +
+  geom_boxplot() +
+  labs(x = "Treatment", y = "Lipid (mJ/mg)", color = "Fiber Concentration (fibers/ml)") +
+  scale_x_discrete(limits = c("Baseline", "Control", "[Fiber 1]", "[Fiber 1] + PCB", "[Fiber 2]", "[Fiber 2] + PCB")) +
+  My_Theme
+```
+
+**Figure 5.** Total energy from cellular lipid content (mJ/mg) extracted from whole body *C. virginica* tissue samples.
+
+
+```{r protein plot, fig.height=4, fig.width=8, echo=FALSE}
+ggplot(Cleaned_CEA_data, aes(Treatment, PRT ,  color = factor(Fiber_concentration))) +
+  geom_boxplot() +
+  labs(x = "Treatment", y = "Protein (mJ/mg)", color = "Fiber Concentration (fibers/ml)") +
+  scale_x_discrete(limits = c("Baseline", "Control", "[Fiber 1]", "[Fiber 1] + PCB", "[Fiber 2]", "[Fiber 2] + PCB")) +
+  My_Theme
+```
+
+**Figure 6.** Total energy from cellular protein content (mJ/mg) extracted from whole body *C. virginica* tissue samples.
+
+
+Next, I am curious to see if the differences in physiological measurements between the baseline and the various treatments are significant. To determine this I will assess for normality and then preform an ANOVA as well as a Tukey significance test. 
+
+```{r assessing normality of physiological data by treatment, include=FALSE}
+
+#making a q-q plot of the physiological data separated out by treatment to assess normality of data within each individual treatment
+
+# NORMALITY OF CARBOHYDRATE DATA
+ggplot(data = Cleaned_CEA_data, aes(sample = CHO)) + 
+  geom_qq() + 
+  stat_qq_line(col = 'blue') +
+  facet_wrap(~Treatment) +
+  ggtitle("Q-Q plot of carbohydrate data")
+
+# NORMALITY OF LIPID DATA
+ggplot(data = Cleaned_CEA_data, aes(sample = LIP)) + 
+  geom_qq() + 
+  stat_qq_line(col = 'blue') +
+  facet_wrap(~Treatment) +
+  ggtitle("Q-Q plot of lipid data")
+
+# NORMALITY OF PROTEIN DATA 
+ggplot(data = Cleaned_CEA_data, aes(sample = PRT)) + 
+  geom_qq() + 
+  stat_qq_line(col = 'blue') +
+  facet_wrap(~Treatment) +
+  ggtitle("Q-Q plot of protein data")
+
+#For the sake of this analysis I will assume normality conditions have been met so that I may continue on with the ANOVA testing. 
 ```
 
