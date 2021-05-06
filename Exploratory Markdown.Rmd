@@ -28,10 +28,12 @@ A single data file will be uploaded for this exploratory analysis. The BIO539_mo
 ```{r loading the data, include=FALSE, message=FALSE}
 library(tidyverse)
 library(lubridate)
-library(gapminder)
 library(knitr)
 library(modelr)
 library(broom)
+library(cowplot)
+
+
 
 CEA_data <- read_csv("BIO539_mock_data.csv")
 
@@ -105,13 +107,42 @@ To begin the exploratory analysis, I am curious to see if there was any noticeab
 #making a theme for my plots so that all axis and legend labels can remain consistent among each plot
 
 My_Theme <- theme(
-  axis.title.x = element_text(size = 16), #x axis title label
-  axis.text = element_text(size = 15), # x and y axis labels
+  axis.title.x = element_text(size = 13), #x axis title label
+  axis.text = element_text(size = 12), # x and y axis labels
   legend.text = element_text(size = 15), # legend contents labels
   legend.title = element_text(size = 16), # legend title label
-  axis.title.y = element_text(size = 16)) # y axis title label
+  axis.title.y = element_text(size = 13)) # y axis title label
 
 ```
+
+```{r table for average shell length, echo=FALSE}
+
+avg_shell_length <- Growth %>%
+  group_by(Treatment) %>%
+  summarise(avg_shell_length = mean(Shell_length)) %>%
+  rename("Mean Shell Length (mm)" = "avg_shell_length")
+
+kable(avg_shell_length)
+
+ 
+
+```
+
+```{r table to relate treatment names with fiber concentrations, echo=TRUE}
+
+
+treatments <- subset (CEA_data, select = c(3,4)) %>%
+  rename("Fiber_concentration" = "Fiber concentration") %>%
+  group_by(Treatment) %>%
+  summarise(Fiber_concentration = mean(Fiber_concentration)) %>%
+  arrange(Fiber_concentration) %>% 
+  rename("Fibers/mL seawater" = "Fiber_concentration")
+  
+kable(treatments) 
+
+
+```
+
 
 
 ```{r plot of shell length, fig.height = 7, fig.width = 12, echo=FALSE}
@@ -119,7 +150,7 @@ My_Theme <- theme(
 
 ggplot(Growth, aes(Treatment, Shell_length, color = factor(Fiber_concentration))) + ##fill = factor(Fiber_concentration) this would change the boxes different colors to distinguish between fiber concentrations
   geom_boxplot() +
-  labs(x = "Treatment", y = "Shell Length (mm)", color = "Fiber Concentration (fibers/ml)") +
+  labs(x = "Treatment", y = "Shell Length (mm)", color = "Fiber [ ] (fibers/ml)") +
   scale_x_discrete(limits = c("Baseline", "Control", "[Fiber 1]", "[Fiber 1] + PCB", "[Fiber 2]", "[Fiber 2] + PCB")) + #changing the order of the x axis
   My_Theme
   
@@ -187,7 +218,7 @@ growth_aov_summary <- summary(growth_aov) #Anova summary stats
 
 str(growth_aov_summary) #assessing the structure of the summary table
 growth_aov_summary[[1]][["Pr(>F)"]][[1]] #gives the first row of the last column in the summary table which is the p stat
-
+# p = 4.409 x 10^-154.
 
 #according to the ANOVA there is a significant difference in at least one pair of the treatment groups (p < 0.05)
 # will now preform a post hoc (Tukey) test to determine where the difference(s) are
@@ -228,7 +259,7 @@ After analyzing growth, I then wanted to look into the mortality of oysters with
 ```{r mortality bar chart, echo=FALSE}
 ggplot(Mortality, aes(Treatment, End_exp_mortality, color = factor(Fiber_concentration))) + 
   geom_col() +
-  labs(x = 'Experimental Treatment', y = 'End of Experiment Mortality (n)', color = "Fiber Concentration (fibers/ml)") +
+  labs(x = 'Experimental Treatment', y = 'End of Experiment Mortality (n)', color = "Fiber [ ] (fibers/ml)") +
   theme_minimal()
 ```
 **Figure 3.** End of experiment mortality for each of the `r length(Mortality$Treatment)` experimental treatments. Experimental treatments that contained fibers laced with PCBs experienced higher moralities than those exposed to fibers only. There were no moralities within the control group over the duration of the experiment.
@@ -240,35 +271,38 @@ When oysters were exposed to PCBs the number of moralities increased regardless 
 Now that I have assessed what growth and moralities looked like across treatments I am now curious to see what the cellular energy allocation data looks like. I will first examine how the individual physiological measurements such as lipids, carbohydrates, and proteins all vary between treatments and how they compare to the baseline values. 
 
 
-```{r carbohydrate plot, fig.height=4, fig.width=8, echo=FALSE}
+```{r carbohydrate plot, fig.height=6, fig.width=12, echo=FALSE}
 
 
-ggplot(Cleaned_CEA_data, aes(Treatment, CHO ,  color = factor(Fiber_concentration))) +
+carb_plot <- ggplot(Cleaned_CEA_data, aes(Treatment, CHO ,  color = factor(Fiber_concentration))) +
   geom_boxplot() +
-  labs(x = "Treatment", y = "Carbohydrate (mJ/mg)", color = "Fiber Concentration (fibers/ml)") +
+  labs(x = "", y = "Carbohydrate (mJ/mg)", color = "Fibers/ml)") +
   scale_x_discrete(limits = c("Baseline", "Control", "[Fiber 1]", "[Fiber 1] + PCB", "[Fiber 2]", "[Fiber 2] + PCB")) +
-  My_Theme
+  My_Theme +
+  theme(legend.position = "none")
 ```
 **Figure 4.** Total energy from cellular carbohydrate content (mJ/mg) extracted from whole body *C. virginica* tissue samples.
 
 
-```{r lipid plot, fig.height=4, fig.width=8, echo=FALSE}
-ggplot(Cleaned_CEA_data, aes(Treatment, LIP ,  color = factor(Fiber_concentration))) +
+```{r lipid plot, fig.height=6, fig.width=12, echo=FALSE}
+lipid_plot <- ggplot(Cleaned_CEA_data, aes(Treatment, LIP ,  color = factor(Fiber_concentration))) +
   geom_boxplot() +
-  labs(x = "Treatment", y = "Lipid (mJ/mg)", color = "Fiber Concentration (fibers/ml)") +
+  labs(x = "", y = "Lipid (mJ/mg)", color = "Fibers/ml") +
   scale_x_discrete(limits = c("Baseline", "Control", "[Fiber 1]", "[Fiber 1] + PCB", "[Fiber 2]", "[Fiber 2] + PCB")) +
-  My_Theme
+  My_Theme +
+  theme(legend.position = "none")
 ```
 
 **Figure 5.** Total energy from cellular lipid content (mJ/mg) extracted from whole body *C. virginica* tissue samples.
 
 
-```{r protein plot, fig.height=4, fig.width=8, echo=FALSE}
-ggplot(Cleaned_CEA_data, aes(Treatment, PRT ,  color = factor(Fiber_concentration))) +
+```{r protein plot, fig.height=6, fig.width=12, echo=FALSE}
+protein_plot <- ggplot(Cleaned_CEA_data, aes(Treatment, PRT ,  color = factor(Fiber_concentration))) +
   geom_boxplot() +
-  labs(x = "Treatment", y = "Protein (mJ/mg)", color = "Fiber Concentration (fibers/ml)") +
+  labs(x = "Treatment", y = "Protein (mJ/mg)", color = "Fibers/ml") +
   scale_x_discrete(limits = c("Baseline", "Control", "[Fiber 1]", "[Fiber 1] + PCB", "[Fiber 2]", "[Fiber 2] + PCB")) +
-  My_Theme
+  My_Theme +
+  theme(legend.position = "bottom") 
 ```
 
 **Figure 6.** Total energy from cellular protein content (mJ/mg) extracted from whole body *C. virginica* tissue samples.
@@ -303,4 +337,135 @@ ggplot(data = Cleaned_CEA_data, aes(sample = PRT)) +
 
 #For the sake of this analysis I will assume normality conditions have been met so that I may continue on with the ANOVA testing. 
 ```
+
+```{r ANOVA on carbohydrate data, include=FALSE}
+
+#ANOVA to determine if there is any significant differences among the treatment groups
+CHO_aov <- aov(CHO~Treatment, data = Cleaned_CEA_data)
+CHO_aov_summary <- summary(CHO_aov) #Anova summary stats
+
+#Code to retrieve p value 
+CHO_aov_summary[[1]][["Pr(>F)"]][[1]] #gives the first row of the last column in the summary table which is the p stat
+
+# p = 0.00336
+#according to the ANOVA there is a significant difference in at least one pair of the treatment groups (p < 0.05)
+
+# Since there is a significant difference present I will now preform a post hoc (Tukey) test to determine where the significant difference(s) are
+
+CHO_stats <- TukeyHSD(CHO_aov)
+TukeyHSD(CHO_aov)
+
+#output the stats into a tibble using the tidy function from broom pkg and save to new variable
+tidy_CHO_stats <- tidy(CHO_stats)
+
+#Cleaned up version that only shows differences between the treatments and the baseline measurements
+cleaned_tidy_CHO_stats <- tidy_CHO_stats[ , c("contrast", "adj.p.value")] %>% #selecting only contrast name and p value columns
+  filter(str_detect(contrast, "Baseline")) %>%   #only include contrast values that have the word baseline within them (only interested in comparing the treatments to the baseline)
+  rename("Contrast" = "contrast",
+         "p value" = "adj.p.value")
+  
+kable(cleaned_tidy_CHO_stats)
+
+#Tukey results indicate that only the Baseline-[Fiber 2] + PCB treatment had a significant difference in carbohydrate energy levels when compared to the baseline. 
+  
+```
+
+```{r ANOVA on lipid data, include=FALSE}
+
+#ANOVA to determine if there is any significant differences in lipid amounts among the treatment groups
+
+LIP_aov <- aov(LIP~Treatment, data = Cleaned_CEA_data)
+
+LIP_aov_summary <- summary(LIP_aov) #Anova summary stats
+
+#Code to retrieve p value 
+LIP_aov_summary[[1]][["Pr(>F)"]][[1]] #gives the first row of the last column in the summary table which is the p stat
+
+# p = 0.00376
+#according to the ANOVA there is a significant difference in at least one pair of the treatment groups (p < 0.05)
+
+# Since there is a significant difference present I will now preform a post hoc (Tukey) test to determine where the significant difference(s) are
+
+LIP_stats <- TukeyHSD(LIP_aov)
+TukeyHSD(LIP_aov)
+
+#output the stats into a tibble using the tidy function from broom pkg and save to new variable
+tidy_LIP_stats <- tidy(LIP_stats)
+
+#Cleaned up version that only shows differences between the treatments and the baseline measurements
+cleaned_tidy_LIP_stats <- tidy_LIP_stats[ , c("contrast", "adj.p.value")] %>% #selecting only contrast name and p value columns
+  filter(str_detect(contrast, "Baseline")) %>%   #only include contrast values that have the word baseline within them (only interested in comparing the treatments to the baseline)
+  rename("Contrast" = "contrast",
+         "p value" = "adj.p.value")
+  
+
+kable(cleaned_tidy_LIP_stats)
+#Tukey results indicate that differences between the lipid content of each treatment compared to the baseline measurements are not statistically significant
+```
+
+
+```{r ANOVA on protein data, include=FALSE}
+
+#ANOVA to determine if there is any significant differences in lipid amounts among the treatment groups
+
+PRT_aov <- aov(PRT~Treatment, data = Cleaned_CEA_data)
+
+PRT_aov_summary <- summary(PRT_aov) #Anova summary stats
+
+#Code to retrieve p value 
+PRT_aov_summary[[1]][["Pr(>F)"]][[1]] #gives the first row of the last column in the summary table which is the p stat
+
+# p = 0.00526
+#according to the ANOVA there is a significant difference in at least one pair of the treatment groups (p < 0.05)
+
+# Since there is a significant difference present I will now preform a post hoc (Tukey) test to determine where the significant difference(s) are
+
+PRT_stats <- TukeyHSD(PRT_aov)
+TukeyHSD(PRT_aov)
+
+#output the stats into a tibble using the tidy function from broom pkg and save to new variable
+tidy_PRT_stats <- tidy(PRT_stats)
+
+#Cleaned up version that only shows differences between the treatments and the baseline measurements
+cleaned_tidy_PRT_stats <- tidy_PRT_stats[ , c("contrast", "adj.p.value")] %>% #selecting only contrast name and p value columns
+  filter(str_detect(contrast, "Baseline")) %>%   #only include contrast values that have the word baseline within them (only interested in comparing the treatments to the baseline)
+  rename("Contrast" = "contrast",
+         "p value" = "adj.p.value")
+  
+kable(cleaned_tidy_PRT_stats)
+#Tukey results indicate that differences between the protein content of each treatment compared to the baseline measurements are not statistically significant
+
+```
+
+
+```{r for loop to plot CHO, LIP, PRT by treatment, fig.height=6, fig.width=12, include=FALSE}
+
+#Not quite working yet. Need to populate the y variable somehow with values from respective columns 
+#not sure if this is appropriate as the y values for each plot are different
+
+#for (i in names(Cleaned_CEA_data)[6:8]){
+ #testloop <- ggplot(Cleaned_CEA_data, aes(x = Treatment, y = i)) +
+  #geom_boxplot() +
+  #labs(x = "Treatment", color = "Fiber Concentration (fibers/ml)") +
+  #scale_x_discrete(limits = c("Baseline", "Control", "[Fiber 1]", "[Fiber 1] + PCB", "[Fiber 2]", "[Fiber 2] + PCB")) +
+  #My_Theme
+  
+  #print(testloop)
+#}
+```
+
+```{r combining CHO, LIP, & PRT plots, fig.height=10, fig.width=7, echo=FALSE}
+
+physio_plots <- cowplot::plot_grid(carb_plot, lipid_plot, protein_plot, ncol = 1, labels = "AUTO", rel_heights = c(1,1,1.15)) 
+ 
+
+
+physio_plots
+
+#ggsave("Desktop/GitHub/Final-project/Figures/", physio_plots, )
+
+
+```
+
+
 
