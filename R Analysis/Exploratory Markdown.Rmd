@@ -1,0 +1,724 @@
+---
+title: "Exploratory markdown"
+author: "Hannah Haskell"
+date: "4/15/2021"
+output: pdf_document
+---
+```{r setup, include=FALSE}
+#setting the working directory
+knitr::opts_knit$set(root.dir = '/Users/hannahhaskell/Desktop/')
+```
+
+## Libraries
+
+`tidyverse`
+
+`lubridate`
+
+`modelr`
+
+`broom`
+
+`knitr`
+
+## Data
+
+A single data file will be uploaded for this exploratory analysis. The BIO539_mock_data includes physiological measurements of the oysters during the exposure trials as well as size measurements (shell length), moralities and the number of algae cells cleared over time during a post exposure clearance rate trial. All data to be analyzed has been made up for the sake of this assignment.  
+
+```{r loading the data, include=FALSE, message=FALSE}
+library(tidyverse)
+library(lubridate)
+library(knitr)
+library(modelr)
+library(broom)
+library(cowplot)
+
+
+
+CEA_data <- read_csv("BIO539_mock_data.csv")
+
+```
+
+## Basic Data Exploration
+
+**Rows:** n = `r nrow(CEA_data)`
+
+**Columns:** n = `r ncol(CEA_data)`
+
+**Column Names:** `r names(CEA_data)`
+
+
+
+After looking over the column names it appears that the CEA data seems a bit disorganized. It looks like there are some spaces left between columns that should be removed and multiple different types of data included in the single file. I think it is worth while to assign a few variables to help separate and organize all of the data for subsequent analyses. 
+
+## New variables created to help organize initial data file:
+
+**Cleaned_CEA_data ** <- contains only the CEA data (i.e carbohydrates, lipids, proteins, energy consumed, energy available, cellular energy allocated (mj/mg))
+
+**Mortality** <- contains mortality data from the duration of the experiment
+
+**Growth** <- contains data on oyster growth throughout the experiment (i.e. shell lengths) for each of the experimental treatments 
+
+```{r Cleaning up CEA_data, include = FALSE}
+
+#Assigning new variables to help organize the data/information better
+
+
+#CEA  data
+Cleaned_CEA_data <- subset (CEA_data, select = -c(12:23)) %>% #CEA only
+  rename(
+    "Fiber_concentration" = "Fiber concentration",
+    "Replicate" = "Tank (replicate #)",
+    "Animal_ID" = "Animal ID #",
+    "CHO" = "CHO mj/mg",
+    "LIP" = "LiP mj/mg",
+    "PRT" = "PRT mj/mg",
+    "Ea" = "Ea mj/mg",
+    "Ec" = "Ec mj/mg",
+    "CEA" = "CEA mj/mg/min")
+
+#Mortality data
+Mortality <- subset (CEA_data, select = c(15:18)) %>%
+  rename(
+    "Treatment" = "Treatment a",
+    "Fiber_concentration" = "Fiber concentration a",
+    "End_exp_mortality" = "End of expt. mortality") %>%
+  filter(!is.na(End_exp_mortality))
+
+
+#Growth data
+Growth <- subset (CEA_data, select = c(1,3,4,12)) %>%
+  rename(
+    "Fiber_concentration" = "Fiber concentration",
+    "Shell_length" = "Shell width (mm)")
+```
+
+```{r summary tables, include=FALSE}
+#Generating summary tables to get a feel for the range of data
+summary(Cleaned_CEA_data)
+summary(Growth)
+summary(Mortality)
+```
+
+
+```{r table to relate treatment names with fiber concentrations, include=FALSE}
+
+#Generate a table to relate treatment names to actual polyester fiber concentrations
+treatments <- subset (CEA_data, select = c(3,4)) %>%
+  rename("Fiber_concentration" = "Fiber concentration") %>%
+  group_by(Treatment) %>%
+  summarise(Fiber_concentration = mean(Fiber_concentration)) %>%
+  arrange(Fiber_concentration) %>% 
+  rename("Fibers/mL seawater" = "Fiber_concentration")
+  
+kable(treatments) 
+
+```
+
+
+To begin the exploratory analysis, I am curious to see if there was any noticeable growth among the oysters over the duration of the experiment. 
+
+```{r setting theme for ggplot labels, include=FALSE}
+#making a theme for my plots so that all axis and legend labels can remain consistent among each plot
+
+My_Theme <- theme(
+  axis.title.x = element_text(size = 18), #x axis title label
+  axis.text = element_text(size = 12), # x and y axis labels
+  legend.text = element_text(size = 18), # legend contents labels
+  legend.title = element_text(size = 18), # legend title label
+  axis.title.y = element_text(size = 18)) # y axis title label
+
+```
+
+**Table 1.** Summary of mean shell lengths for each experimental treatment group. Baseline measurements were taken before the experiment began. Remaining treatment measurements we taken at the end of the exposure experiment (approximately 3 months after baseline measurements).
+
+
+```{r table for average shell length, echo=FALSE}
+
+avg_shell_length <- Growth %>%
+  group_by(Treatment) %>%
+  summarise(avg_shell_length = mean(Shell_length)) %>%
+  rename("Mean Shell Length (mm)" = "avg_shell_length")
+
+kable(avg_shell_length)
+
+ 
+
+```
+
+It appears that there was growth overall in each of the experimental treatment groups. The [Fiber 2] + PCB treatment appears to have the smallest amount of growth (on average) out of all the treatment groups. Next I will generate a box plot to demonstrate the variation of shell length for each experimental group. 
+
+
+```{r plot of shell length, fig.height = 7, fig.width = 12, echo=FALSE}
+#plot these to see if there was any shell growth over the duration of the experiment 
+
+shell_length_plot <- ggplot(Growth, aes(Treatment, Shell_length, color = factor(Fiber_concentration))) + ##fill = factor(Fiber_concentration) this would change the boxes different colors to distinguish between fiber concentrations
+  geom_boxplot() +
+  labs(x = "Treatment", y = "Shell Length (mm)", color = "Fibers/ml") +
+  scale_x_discrete(limits = c("Baseline", "Control", "[Fiber 1]", "[Fiber 1] + PCB", "[Fiber 2]", "[Fiber 2] + PCB")) + #changing the order of the x axis
+  My_Theme
+
+#saving the figure
+ggsave("GitHub/Final-project/Figures/shell_length_plot.jpg", shell_length_plot, width = 10, height = 6)
+  
+shell_length_plot
+```
+
+**Figure 1.** Shell length of oysters (n = 8 per treatment). Baseline measurements represent shell length at the beginning of the experiment. All other lengths were measured 3 months after the baseline measurements, at the end of the experiment. Colored outlines indicate the actual fiber concentration of each treatment (red = 0 fibers/ml, green = 1 fiber/ml, blue = 10 fibers/ml).
+
+
+
+Overall there appears to have been consistent growth among treatment groups with the exception of the [Fiber 2] + PCB group which had less growth overall (possibly due to having the greatest presence of PCBs?).
+
+
+```{r growth significance testing, include=FALSE}
+
+#make sure R is interpreting treatment column as characters
+class(Growth$Treatment)
+
+#assessing normality
+
+qqnorm(Growth$Shell_length)
+qqline(Growth$Shell_length, col = 'red')
+
+#this worked however I think it makes more sense to assess the normality of the individual treatment groups separately rather than all together
+
+#trying to do this with GGplot
+ggplot(data = Growth, aes(sample = Shell_length)) +
+  geom_qq() +
+  stat_qq_line(col = 'blue') + #adding in the normal distribution line
+  facet_wrap(~Treatment) #assess normality for each treatment separately 
+
+#see if transforming the data makes any difference in normality
+#log transformation of shell length data
+log_shell_length <- log(Growth$Shell_length)
+
+#sq root transform data 
+sqrt_shell_length <- sqrt(Growth$Shell_length)
+
+#Add the log shell lengths and sq rt transformed shell lengths to the growth data
+Growth <- Growth %>%
+  mutate(log_shell_length = log_shell_length, sqrt_shell_length = sqrt_shell_length)
+
+#Try graphing with these transformed values
+ggplot(data = Growth, aes(sample = sqrt_shell_length)) +
+  geom_qq() +
+  stat_qq_line() +
+  facet_wrap(~Treatment)
+
+#No obvious differences between the transformed and the raw data
+#For the sake of this analysis will assume normality is sufficient for ANOVA testing
+
+```
+
+I am now curious to see if the differences in growth between the baseline and the various treatments are actually significant, especially the [Fiber 2] + PCB group. To determine this I will assess for normality be generating a Q-Q plot for each experimental treatment group and then preform an ANOVA as well as a Tukey significance test (if necessary). 
+
+```{r assessing normality of growth data by treatment, include=FALSE}
+ggplot(data = Growth, aes(sample = Shell_length)) + 
+  geom_qq() +
+  stat_qq_line(col = 'blue') +
+  facet_wrap(~Treatment)
+
+#**Figure 2.** Q-Q plot to assess the normality of the growth data among each of the treatment groups. Each treatment group appears to follow a normal distribution with the exception of the [Fiber 1] treatment group.
+```
+
+I first want to make a function that will allow me to pull out p values from the ANOVA summary stats as I will likely be doing this repeatedly throughout the analysis.
+
+```{r creating a function to pull the p value from ANOVA summary stats, include=FALSE}
+
+#Will need to pull the p-values a lot for all ANOVA testing that will be done so making this into a function will make this process easier
+
+aov_p_value <- function(aov_summary) {
+  if (is.numeric(aov_summary)) {
+    stop("must provide previously assigned aov_summary variable")
+  }
+  p_value <- (aov_summary[[1]][["Pr(>F)"]][[1]])
+  return(p_value)
+}
+
+
+#testing the function error message
+
+#aov_p_value(1)
+#works!
+```
+
+**New function:** "aov_p_value()"
+
+```{r ANOVA & Tukey on growth data, include=FALSE}
+
+#ANOVA to determine if there is any significant differences among the treatment groups
+growth_aov <- aov(Shell_length~Treatment, data = Growth)
+growth_aov_summary <- summary(growth_aov) #Anova summary stats
+
+str(growth_aov_summary) #assessing the structure of the summary table
+growth_aov_summary[[1]][["Pr(>F)"]][[1]] #gives the first row of the last column in the summary table which is the p stat
+# p = 4.409 x 10^-15
+
+#testing function
+aov_p_value(growth_aov_summary)
+
+#it works!!
+
+#according to the ANOVA there is a significant difference in at least one pair of the treatment groups (p < 0.05)
+# will now preform a post hoc (Tukey) test to determine where the difference(s) are
+#save tukey results to variable
+growth_stats <- TukeyHSD(growth_aov)
+
+
+#output the stats into a tibble using the tidy function from broom pkg and save to new variable
+tidy_growth_stats <- tidy(growth_stats)
+
+#Cleaned up version that only shows differences between the treatments and the baseline measurements
+cleaned_tidy_growth_stats <- tidy_growth_stats[ , c("contrast", "adj.p.value")] %>% #selecting only contrast name and p value columns
+  filter(str_detect(contrast, "Baseline")) %>%   #only include contrast values that have the word baseline within them (only interested in comparing the treatments to the baseline)
+  rename("Contrast" = "contrast",
+         "p value" = "adj.p.value")
+  
+#Printing out a cleaned up version of the anova summary stats including only relevant comparisons
+kable(cleaned_tidy_growth_stats) 
+  
+```
+
+
+
+
+Since analysis of the Q-Q plots appears to show that the majority of the growth data is normally distributed (with the exception of [Fiber 1]) I plan to assume normality and proceed with the ANOVA analysis for the sake of this project. 
+
+Results from the ANOVA test indicate that there is a significant difference in growth among the experimental treatments (p = `r aov_p_value(growth_aov_summary)`). 
+
+A Tukey test was then preformed on the growth data to determine where any significant differences are within the data (i.e. what group(s) are significantly different from the baseline measurements. Results from the Tukey test indicate that differences between all treatments and the baseline are significant (p < 0.05 for each treatment) with the exception of [Fiber 2] + PCB group (p = 0.139). 
+
+These results tell me that there was significantly less growth overall in the oysters exposed to the [Fiber 2] + PCB treatment compared to each of the other experimental treatments. This may likely have to do with the increased presence of PCBs in the tank as a result of the higher concentration of the PCB laced fibers. 
+
+After analyzing growth, I then wanted to look into the mortality of oysters within each of the experimental treatments. For this analysis, a simple bar chart will likely be sufficient to visualize differences between treatments. 
+
+```{r mortality bar chart, echo=FALSE}
+#assigning plot to variable so can combine later if needed
+mortality_plot <- ggplot(Mortality, aes(Treatment, End_exp_mortality, color = factor(Fiber_concentration))) + 
+  geom_col() +
+  labs(x = 'Experimental Treatment', y = 'End of Experiment Mortality (n)', color = "Fibers/ml") +
+  theme_minimal()
+
+#saving the figure
+ggsave("GitHub/Final-project/Figures/mortality_plot.jpg",mortality_plot, width = 7, height = 4)
+
+#Because this data is made up of single counts (1 number for each treatment group) I am unable to determine whether or not the differences between mortality are statisticaly different from one another via statistican significance testing.
+
+#plot for markdown pdf
+mortality_plot
+```
+
+**Figure 2.** End of experiment mortality for each of the `r length(Mortality$Treatment)` experimental treatments. Experimental treatments that contained fibers laced with PCBs experienced higher moralities than those exposed to fibers only. There were no moralities within the control group over the duration of the experiment.
+
+
+When oysters were exposed to PCBs the number of moralities increased regardless of the fiber concentration. That being said, the [Fiber 2] + PCB had the highest number of moralities (n = `r Mortality[4,4] `)
+
+Now that I have assessed what growth and moralities looked like across treatments I am now curious to see what the cellular energy allocation data looks like. I will first examine how the individual physiological measurements such as lipids, carbohydrates, and proteins all vary between treatments and how they compare to the baseline values. 
+
+
+```{r carbohydrate plot, fig.height=6, fig.width=12, echo=FALSE}
+#looking at carbohydrate data
+#assigning plot to variable so can combine later if needed
+carb_plot <- ggplot(Cleaned_CEA_data, aes(Treatment, CHO ,  color = factor(Fiber_concentration))) +
+  geom_boxplot() +
+  labs(x = "", y = "Carbohydrate (mJ/mg)", color = "Fibers/ml)") +
+  scale_x_discrete(limits = c("Baseline", "Control", "[Fiber 1]", "[Fiber 1] + PCB", "[Fiber 2]", "[Fiber 2] + PCB")) +
+  My_Theme +
+  theme(legend.position = "none")
+
+#plot for markdown pdf
+carb_plot <- ggplot(Cleaned_CEA_data, aes(Treatment, CHO ,  color = factor(Fiber_concentration))) +
+  geom_boxplot() +
+  labs(x = "", y = "Carbohydrate (mJ/mg)", color = "Fibers/ml)") +
+  scale_x_discrete(limits = c("Baseline", "Control", "[Fiber 1]", "[Fiber 1] + PCB", "[Fiber 2]", "[Fiber 2] + PCB")) +
+  My_Theme
+
+```
+
+**Figure 4.** Total energy from cellular carbohydrate content (mJ/mg) extracted from whole body *C. virginica* tissue samples.
+
+
+```{r lipid plot, fig.height=6, fig.width=12, echo=FALSE}
+#looking at lipid data
+#assigning plot to variable so can combine later if needed
+lipid_plot <- ggplot(Cleaned_CEA_data, aes(Treatment, LIP ,  color = factor(Fiber_concentration))) +
+  geom_boxplot() +
+  labs(x = "", y = "Lipid (mJ/mg)", color = "Fibers/ml") +
+  scale_x_discrete(limits = c("Baseline", "Control", "[Fiber 1]", "[Fiber 1] + PCB", "[Fiber 2]", "[Fiber 2] + PCB")) +
+  My_Theme +
+  theme(legend.position = "none")
+
+#plot for markdown pdf
+ggplot(Cleaned_CEA_data, aes(Treatment, LIP ,  color = factor(Fiber_concentration))) +
+  geom_boxplot() +
+  labs(x = "", y = "Lipid (mJ/mg)", color = "Fibers/ml") +
+  scale_x_discrete(limits = c("Baseline", "Control", "[Fiber 1]", "[Fiber 1] + PCB", "[Fiber 2]", "[Fiber 2] + PCB")) +
+  My_Theme
+```
+
+**Figure 5.** Total energy from cellular lipid content (mJ/mg) extracted from whole body *C. virginica* tissue samples.
+
+
+```{r protein plot, fig.height=6, fig.width=12, echo=FALSE}
+#looking at protein data
+#assigning plot to variable so can combine later if needed
+protein_plot <- ggplot(Cleaned_CEA_data, aes(Treatment, PRT ,  color = factor(Fiber_concentration))) +
+  geom_boxplot() +
+  labs(x = "Treatment", y = "Protein (mJ/mg)", color = "Fibers/ml") +
+  scale_x_discrete(limits = c("Baseline", "Control", "[Fiber 1]", "[Fiber 1] + PCB", "[Fiber 2]", "[Fiber 2] + PCB")) +
+  My_Theme +
+  theme(legend.position = "bottom") 
+
+#plot for markdown pdf
+ggplot(Cleaned_CEA_data, aes(Treatment, PRT ,  color = factor(Fiber_concentration))) +
+  geom_boxplot() +
+  labs(x = "Treatment", y = "Protein (mJ/mg)", color = "Fibers/ml") +
+  scale_x_discrete(limits = c("Baseline", "Control", "[Fiber 1]", "[Fiber 1] + PCB", "[Fiber 2]", "[Fiber 2] + PCB")) +
+  My_Theme
+```
+
+**Figure 6.** Total energy from cellular protein content (mJ/mg) extracted from whole body *C. virginica* tissue samples.
+
+
+
+```{r combining CHO, LIP, & PRT plots, fig.height=10, fig.width=7, include=FALSE}
+
+#combining the carbohydrate, lipid, and protein plots to use in final paper
+physio_plots <- cowplot::plot_grid(carb_plot, lipid_plot, protein_plot, ncol = 1, labels = "AUTO", rel_heights = c(1,1,1.15)) 
+ 
+
+physio_plots
+
+#saving the figure
+ggsave("GitHub/Final-project/Figures/physio_plots.jpg", physio_plots, width = 10, height = 13)
+
+
+```
+
+
+
+Next, I am curious to see if the differences in physiological measurements between the baseline and the various experimental treatments are significant. To determine this I will assess for normality and then preform an ANOVA as well as a Tukey significance test (if required). 
+
+```{r assessing normality of physiological data by treatment, include=FALSE}
+
+#making a q-q plot of the physiological data separated out by treatment to assess normality of data within each individual treatment
+
+# NORMALITY OF CARBOHYDRATE DATA
+ggplot(data = Cleaned_CEA_data, aes(sample = CHO)) + 
+  geom_qq() + 
+  stat_qq_line(col = 'blue') +
+  facet_wrap(~Treatment) +
+  ggtitle("Q-Q plot of carbohydrate data")
+
+# NORMALITY OF LIPID DATA
+ggplot(data = Cleaned_CEA_data, aes(sample = LIP)) + 
+  geom_qq() + 
+  stat_qq_line(col = 'blue') +
+  facet_wrap(~Treatment) +
+  ggtitle("Q-Q plot of lipid data")
+
+# NORMALITY OF PROTEIN DATA 
+ggplot(data = Cleaned_CEA_data, aes(sample = PRT)) + 
+  geom_qq() + 
+  stat_qq_line(col = 'blue') +
+  facet_wrap(~Treatment) +
+  ggtitle("Q-Q plot of protein data")
+
+#For the sake of this analysis I will assume normality conditions have been met so that I may continue on with the ANOVA testing. 
+```
+
+```{r ANOVA on carbohydrate data, include=FALSE}
+
+#ANOVA to determine if there is any significant differences in carbohydrate data among the treatment groups
+CHO_aov <- aov(CHO~Treatment, data = Cleaned_CEA_data)
+CHO_aov_summary <- summary(CHO_aov) #Anova summary stats
+
+#function to retrieve p value 
+aov_p_value(CHO_aov_summary)
+
+# p = 0.00336
+#according to the ANOVA there is a significant difference in at least one pair of the treatment groups (p < 0.05)
+
+# Since there is a significant difference present I will now preform a post hoc (Tukey) test to determine where the significant difference(s) are
+
+CHO_stats <- TukeyHSD(CHO_aov)
+TukeyHSD(CHO_aov)
+
+#output the stats into a tibble using the tidy function from broom pkg and save to new variable
+tidy_CHO_stats <- tidy(CHO_stats)
+
+#Cleaned up version that only shows differences between the treatments and the baseline measurements
+cleaned_tidy_CHO_stats <- tidy_CHO_stats[ , c("contrast", "adj.p.value")] %>% #selecting only contrast name and p value columns
+  filter(str_detect(contrast, "Baseline")) %>%   #only include contrast values that have the word baseline within them (only interested in comparing the treatments to the baseline)
+  rename("Contrast" = "contrast",
+         "p value" = "adj.p.value")
+  
+kable(cleaned_tidy_CHO_stats)
+
+#Tukey results indicate that only the Baseline-[Fiber 2] + PCB treatment had a significant difference in carbohydrate energy levels when compared to the baseline. 
+  
+```
+
+```{r ANOVA on lipid data, include=FALSE}
+
+#ANOVA to determine if there is any significant differences in lipid content among the treatment groups
+
+LIP_aov <- aov(LIP~Treatment, data = Cleaned_CEA_data)
+
+LIP_aov_summary <- summary(LIP_aov) #Anova summary stats
+
+#Function to retrieve p value 
+aov_p_value(LIP_aov_summary)
+
+# p = 0.00376
+#according to the ANOVA there is a significant difference in at least one pair of the treatment groups (p < 0.05)
+
+# Since there is a significant difference present I will now preform a post hoc (Tukey) test to determine where the significant difference(s) are
+
+LIP_stats <- TukeyHSD(LIP_aov)
+TukeyHSD(LIP_aov)
+
+#output the stats into a tibble using the tidy function from broom pkg and save to new variable
+tidy_LIP_stats <- tidy(LIP_stats)
+
+#Cleaned up version that only shows differences between the treatments and the baseline measurements
+cleaned_tidy_LIP_stats <- tidy_LIP_stats[ , c("contrast", "adj.p.value")] %>% #selecting only contrast name and p value columns
+  filter(str_detect(contrast, "Baseline")) %>%   #only include contrast values that have the word baseline within them (only interested in comparing the treatments to the baseline)
+  rename("Contrast" = "contrast",
+         "p value" = "adj.p.value")
+  
+#kable function to output test results as a table
+kable(cleaned_tidy_LIP_stats)
+
+#Tukey results indicate that differences between the lipid content of each treatment compared to the baseline measurements are not statistically significant. Significant difference detected in ANOVA test likely from inter-treatment comparison which is not what I am concerned with. 
+```
+
+
+```{r ANOVA on protein data, include=FALSE}
+
+#ANOVA to determine if there is any significant differences in lipid amounts among the treatment groups
+PRT_aov <- aov(PRT~Treatment, data = Cleaned_CEA_data)
+
+PRT_aov_summary <- summary(PRT_aov) #Anova summary stats
+summary(PRT_aov)
+
+#Function to retrieve p value 
+aov_p_value(PRT_aov_summary)
+
+# p = 0.00526
+#according to the ANOVA there is a significant difference in at least one pair of the treatment groups (p < 0.05)
+
+# Since there is a significant difference present I will now preform a post hoc (Tukey) test to determine where the significant difference(s) are
+
+#Tukey testing
+PRT_stats <- TukeyHSD(PRT_aov)
+TukeyHSD(PRT_aov)
+
+#output the stats into a tibble using the tidy function from broom pkg and save to new variable
+tidy_PRT_stats <- tidy(PRT_stats)
+
+#Cleaned up version that only shows differences between the treatments and the baseline measurements
+cleaned_tidy_PRT_stats <- tidy_PRT_stats[ , c("contrast", "adj.p.value")] %>% #selecting only contrast name and p value columns
+  filter(str_detect(contrast, "Baseline")) %>%   #only include contrast values that have the word baseline within them (only interested in comparing the treatments to the baseline)
+  rename("Contrast" = "contrast",
+         "p value" = "adj.p.value")
+
+##kable function to output test results as a table  
+kable(cleaned_tidy_PRT_stats)
+#Tukey results indicate that differences between the protein content of each treatment compared to the baseline measurements are not statistically significant. Significant difference detected in ANOVA test likely from inter-treatment comparison which is not what I am concerned with. 
+
+```
+
+
+```{r for loop to plot CHO, LIP, PRT by treatment, fig.height=6, fig.width=12, include=FALSE}
+
+#Not quite working yet. Need to populate the y variable somehow with values from respective columns 
+#not sure if this is appropriate as the y values for each plot are different... may return to later if needed
+
+#for (i in names(Cleaned_CEA_data)[6:8]){
+ #testloop <- ggplot(Cleaned_CEA_data, aes(x = Treatment, y = i)) + #issue seems to be with populating the y axis... 
+  #geom_boxplot() +
+  #labs(x = "Treatment", color = "Fiber Concentration (fibers/ml)") +
+  #scale_x_discrete(limits = c("Baseline", "Control", "[Fiber 1]", "[Fiber 1] + PCB", "[Fiber 2]", "[Fiber 2] + PCB")) +
+  #My_Theme
+  
+  #print(testloop)
+#}
+```
+
+Now that I have looked at patterns/relationships within the individual cellular nutrients I next want to assess what the overall available cellular energy (derived from the sum of energy provided by each of the cellular nutrients (carbohydrates, lipids, proteins)) looks like and determine if there are any significant differences among the experimental treatments when compared to baseline cellular energy levels. 
+
+I am also interested in now looking at the energetic demands of the oysters (i.e. consumed cellular energy) which values are derived from measuring mitochondrial activity within the oyster cells via a maximum potential activity assay. 
+
+First I will plot the energy available and the energy consumed figures separately and then combine them into a single figure output. 
+
+```{r energy available & energy consumed plots, fig.height=6, fig.width=12, echo=FALSE}
+#plotting Ea values for baseline and each experimental treatment and assigning to Ea_plot variable
+EA_plot <- ggplot(Cleaned_CEA_data, aes(Treatment, Ea ,  color = factor(Fiber_concentration))) +
+  geom_boxplot() +
+  labs(x = "", y = "Energy available (Ea) (mJ/mg)", color = "Fibers/ml") +
+  scale_x_discrete(limits = c("Baseline", "Control", "[Fiber 1]", "[Fiber 1] + PCB", "[Fiber 2]", "[Fiber 2] + PCB")) +
+  My_Theme +
+  theme(legend.position = "none")
+
+#plotting Ec values for baseline and each experimental treatment and assigning to Ec_plot variable
+EC_plot <- ggplot(Cleaned_CEA_data, aes(Treatment, Ec ,  color = factor(Fiber_concentration))) +
+  geom_boxplot() +
+  labs(x = "Treatment", y = "Energy Consumed (Ec) (mJ/mg)", color = "Fibers/ml") +
+  scale_x_discrete(limits = c("Baseline", "Control", "[Fiber 1]", "[Fiber 1] + PCB", "[Fiber 2]", "[Fiber 2] + PCB")) +
+  My_Theme +
+  theme(legend.position = "bottom")
+  
+#Combining the two plots into a single figure output 
+energy_plots <- cowplot::plot_grid(EA_plot, EC_plot, ncol = 1, labels = "AUTO", rel_heights = c(1,1.05)) 
+ 
+
+energy_plots
+
+#saving the figure
+ggsave("GitHub/Final-project/Figures/energy_plots.jpg", energy_plots, width = 10, height = 13)
+
+```
+
+
+From a quick visual inspection, available energy values appear to be lowest within the [Fiber 2] treatment groups and energy consumed values appear similar among baseline and all treatment groups. I will now generate Q-Q plots for each of these data sets to determine normality and then proceed with ANOVA and Tukey significance testing to determine if there are any significant differences in both energy available and energy consumed among the treatment groups when compared to the baseline values. 
+
+
+```{r assessing normality of Ea and Ec data by treatment, include=FALSE}
+
+#making a q-q plot of the Ea & Ec data separated out by treatment to assess normality of data within each individual treatment
+
+# NORMALITY OF Ea DATA
+ggplot(data = Cleaned_CEA_data, aes(sample = Ea)) + 
+  geom_qq() + 
+  stat_qq_line(col = 'blue') +
+  facet_wrap(~Treatment) +
+  ggtitle("Q-Q plot of energy available data")
+
+# NORMALITY OF Ec DATA
+ggplot(data = Cleaned_CEA_data, aes(sample = Ec)) + 
+  geom_qq() + 
+  stat_qq_line(col = 'blue') +
+  facet_wrap(~Treatment) +
+  ggtitle("Q-Q plot of energy consumed data")
+
+#For the sake of this analysis I will assume normality conditions have been met so that I may continue on with the ANOVA testing. 
+
+
+```
+
+```{r Ea significance testing (ANOVA & Tukey), include=FALSE}
+
+#ANOVA to determine if there is any significant differences in EA among the treatment groups
+EA_aov <- aov(Ea~Treatment, data = Cleaned_CEA_data)
+EA_aov_summary <- summary(EA_aov) #Anova summary stats
+
+#Code to retrieve p value 
+aov_p_value(EA_aov_summary)
+
+# p = 0.00483
+#according to the ANOVA there is a significant difference in at least one pair of the treatment groups (p < 0.05)
+
+# Since there is a significant difference present I will now preform a post hoc (Tukey) test to determine where the significant difference(s) are
+
+EA_stats <- TukeyHSD(EA_aov)
+TukeyHSD(EA_aov)
+
+#output the stats into a tibble
+tidy_EA_stats <- tidy(EA_stats)
+
+#Cleaned up version that only shows differences between the treatments and the baseline measurements
+cleaned_tidy_EA_stats <- tidy_EA_stats[ , c("contrast", "adj.p.value")] %>% #selecting only contrast name and p value columns
+  filter(str_detect(contrast, "Baseline")) %>%   #only include contrast values that have the word baseline within them (only interested in comparing the treatments to the baseline)
+  rename("Contrast" = "contrast",
+         "p value" = "adj.p.value")
+  
+kable(cleaned_tidy_EA_stats)
+
+#Tukey results indicate that available energy values within the experimental treatments are not statistically different than available energy values from the baseline treatments. Significant difference detected in ANOVA test likely from inter-treatment comparison which is not what I am concerned with. 
+
+```
+
+
+```{r Ec significance testing (ANOVA), include=FALSE}
+
+#ANOVA to determine if there is any significant differences in EC among the treatment groups
+EC_aov <- aov(Ec~Treatment, data = Cleaned_CEA_data)
+EC_aov_summary <- summary(EC_aov) #Anova summary stats
+summary(EC_aov)
+#Code to retrieve p value 
+aov_p_value(EC_aov_summary)
+
+# p = 0.960
+#according to the ANOVA there are no significant differences among any of the experimental treatment groups (p > 0.05)
+
+# Since there are no significant differences among any of the experimental treatment groups there is no need for further testing. 
+
+
+```
+
+Finally, it is time to look at the CEA data which is equalivent to Ea/Ec. First I will make a box plot to help visualize the overall distribution of CEA values within each experimental group.
+
+```{r plotting CEA data, echo=FALSE}
+
+#CEA boxplot 
+CEA_plot <- ggplot(Cleaned_CEA_data, aes(Treatment, CEA,  color = factor(Fiber_concentration))) +
+  geom_boxplot() +
+  labs(x = "Treatment", y = "Cellular Energy Allocation (CEA) (mJ/mg)", color = "Fibers/ml") +
+  scale_x_discrete(limits = c("Baseline", "Control", "[Fiber 1]", "[Fiber 1] + PCB", "[Fiber 2]", "[Fiber 2] + PCB")) +
+  My_Theme
+
+#plot for markdown output if needed
+ggplot(Cleaned_CEA_data, aes(Treatment, CEA,  color = factor(Fiber_concentration))) +
+  geom_boxplot() +
+  labs(x = "Treatment", y = "Cellular Energy Allocation (CEA) (mJ/mg)", color = "Fibers/ml") +
+  scale_x_discrete(limits = c("Baseline", "Control", "[Fiber 1]", "[Fiber 1] + PCB", "[Fiber 2]", "[Fiber 2] + PCB")) +
+  My_Theme
+
+#Figure x. Cellular energy allocation values (mJ/mg) calculated by ratio of energy available (Ea): energy consumed (Ec). Baseline measurements were conducted before the experiment began. The remaining treatments were sampled at the end of the exposure experiment (approximately 3 months later).
+
+#saving the plot
+ggsave("GitHub/Final-project/Figures/CEA_plot.jpg", CEA_plot, width = 10, height = 6)
+```
+
+After visual inspection, CEA values appear to be relatively lower within the [Fiber 2] treatment groups. I will now generate Q-Q plots for each of these data sets to determine normality and then proceed with ANOVA and Tukey significance testing to determine if there are any significant differences in CEA data.
+
+
+```{r assessing normality of CEA data by treatment, include=FALSE}
+
+#making a q-q plot of the CEA data separated out by treatment to assess normality of data within each individual treatment
+
+# NORMALITY OF CEA DATA
+ggplot(data = Cleaned_CEA_data, aes(sample = CEA)) + 
+  geom_qq() + 
+  stat_qq_line(col = 'blue') +
+  facet_wrap(~Treatment) +
+  ggtitle("Q-Q plot of Cellular Energy Allocation data")
+
+#Similar to what I have done with previous Q-Q plots, I am going to continue by assuming normality of the data for the sake of this project.
+```
+
+```{r CEA significance testing (ANOVA), include=FALSE}
+
+#ANOVA to determine if there is any significant differences in CEA among the treatment groups
+CEA_aov <- aov(CEA~Treatment, data = Cleaned_CEA_data)
+CEA_aov_summary <- summary(CEA_aov) #Anova summary stats
+
+#Code to retrieve p value 
+aov_p_value(CEA_aov_summary)
+
+# p = 0.373
+#according to the ANOVA there is no significant difference between any pairs of the experimental treatment groups (p > 0.05)
+
+# Since there are no significant differences among any of the experimental treatment groups there is no need for further testing. 
+
+
+
+
+```
+Results from CEA ANOVA indicate that none of the experimental treatment groups CEA value are statistically different from the baseline CEA measurements. This tells me that overall, neither fiber concentration (and therefore PCB concentration as fibers were spiked with the PCBs) appeared to have any significant influence on the oysters physiology, specifically, their cellular energy allocation levels. 
+
+
+***Note
+Additional data may be gathered during the actual experiment however the work is still very much in the experimental design phase so this analyses was as close to the real analyses as I could possibly make it given the current circumstances and my current statistically abilities.
