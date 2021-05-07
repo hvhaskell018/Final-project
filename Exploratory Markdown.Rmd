@@ -717,4 +717,8 @@ aov_p_value(CEA_aov_summary)
 
 
 ```
-Results from CEA ANOVA indicate that none of the experimental treatment groups CEA value are statistically different from the baseline CEA measurements. This tells me that overall, neither fiber concentration (and therefore PCB concentration as fibers were spiked with the PCBs) appeared to have any significant influence on the oysters physiology, speficially, their cellular energy allocation levels. 
+Results from CEA ANOVA indicate that none of the experimental treatment groups CEA value are statistically different from the baseline CEA measurements. This tells me that overall, neither fiber concentration (and therefore PCB concentration as fibers were spiked with the PCBs) appeared to have any significant influence on the oysters physiology, specifically, their cellular energy allocation levels. 
+
+
+***Note
+Additional data may be gathered during the actual experiment however the work is still very much in the experimental design phase so this analyses was as close to the real analyses as I could possibly make it given the current circumstances and my current statistically abilities.
